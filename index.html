@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Modern Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --text-primary: #ffffff;
+            --text-secondary: #a8a8b3;
+            --accent: #e94560;
+            --accent-hover: #ff6b6b;
+            --button-bg: #2d3561;
+            --button-hover: #3d4571;
+            --operator-bg: #e94560;
+            --operator-hover: #ff6b6b;
+            --equals-bg: #00d9ff;
+            --equals-hover: #00b8e6;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --button-size: min(70px, 15vw);
+            --gap-size: min(12px, 2.5vw);
+        }
+
+        body.light-mode {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e0e0e0;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --accent: #3498db;
+            --accent-hover: #2980b9;
+            --button-bg: #ecf0f1;
+            --button-hover: #d5dbdb;
+            --operator-bg: #3498db;
+            --operator-hover: #2980b9;
+            --equals-bg: #27ae60;
+            --equals-hover: #229954;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: var(--transition);
+            padding: 10px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .calculator-container {
+            background: var(--bg-secondary);
+            border-radius: min(30px, 5vw);
+            padding: min(30px, 5vw);
+            box-shadow: 0 20px 60px var(--shadow);
+            width: 100%;
+            max-width: 500px;
+            animation: slideIn 0.5s ease-out;
+            position: relative;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: min(20px, 4vw);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: min(10px, 2vw);
+        }
+
+        .mode-btn {
+            background: var(--button-bg);
+            border: none;
+            color: var(--text-secondary);
+            padding: min(8px, 1.5vw) min(16px, 3vw);
+            border-radius: min(20px, 4vw);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: clamp(12px, 3vw, 14px);
+            font-weight: 500;
+        }
+
+        .mode-btn.active {
+            background: var(--accent);
+            color: var(--text-primary);
+        }
+
+        .mode-btn:hover:not(.active) {
+            background: var(--button-hover);
+        }
+
+        .theme-toggle {
+            background: var(--button-bg);
+            border: none;
+            color: var(--text-primary);
+            width: min(40px, 8vw);
+            height: min(40px, 8vw);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(16px, 4vw, 20px);
+        }
+
+        .theme-toggle:hover {
+            background: var(--button-hover);
+            transform: rotate(180deg);
+        }
+
+        .display {
+            background: var(--bg-tertiary);
+            border-radius: min(15px, 3vw);
+            padding: min(20px, 4vw);
+            margin-bottom: min(20px, 4vw);
+            min-height: clamp(100px, 20vw, 120px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+            word-break: break-all;
+        }
+
+        .history {
+            color: var(--text-secondary);
+            font-size: clamp(12px, 3vw, 14px);
+            min-height: clamp(16px, 3vw, 20px);
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .current-input {
+            color: var(--text-primary);
+            font-size: clamp(24px, 6vw, 36px);
+            text-align: right;
+            font-weight: 300;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-wrap: break-word;
+            line-height: 1.2;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--gap-size);
+        }
+
+        .scientific-buttons {
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--gap-size);
+            margin-bottom: var(--gap-size);
+        }
+
+        .scientific-mode .scientific-buttons {
+            display: grid;
+        }
+
+        .btn {
+            background: var(--button-bg);
+            border: none;
+            color: var(--text-primary);
+            padding: 0;
+            width: 100%;
+            height: var(--button-size);
+            border-radius: min(15px, 3vw);
+            font-size: clamp(16px, 4vw, 20px);
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+        }
+
+        .btn:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active:before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            background: var(--button-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--shadow);
+        }
+
+        .btn:active {
+            transform: translateY(0) scale(0.95);
+            box-shadow: 0 2px 5px var(--shadow);
+        }
+
+        .btn.operator {
+            background: var(--operator-bg);
+            font-weight: 600;
+        }
+
+        .btn.operator:hover {
+            background: var(--operator-hover);
+        }
+
+        .btn.equals {
+            background: var(--equals-bg);
+            grid-column: span 2;
+            font-weight: 600;
+        }
+
+        .btn.equals:hover {
+            background: var(--equals-hover);
+        }
+
+        .btn.clear {
+            background: #e74c3c;
+        }
+
+        .btn.clear:hover {
+            background: #c0392b;
+        }
+
+        .btn.zero {
+            grid-column: span 2;
+        }
+
+        .history-panel {
+            margin-top: min(20px, 4vw);
+            max-height: min(200px, 30vh);
+            overflow-y: auto;
+            background: var(--bg-tertiary);
+            border-radius: min(15px, 3vw);
+            padding: min(15px, 3vw);
+            display: none;
+        }
+
+        .history-panel.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+            }
+            to {
+                opacity: 1;
+                max-height: min(200px, 30vh);
+            }
+        }
+
+        .history-item {
+            color: var(--text-secondary);
+            padding: min(8px, 2vw);
+            border-bottom: 1px solid var(--button-bg);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: clamp(12px, 3vw, 14px);
+            word-break: break-all;
+        }
+
+        .history-item:hover {
+            color: var(--text-primary);
+            background: var(--button-bg);
+            border-radius: min(8px, 2vw);
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-history {
+            background: var(--button-bg);
+            border: none;
+            color: var(--text-primary);
+            padding: min(10px, 2vw) min(20px, 4vw);
+            border-radius: min(20px, 4vw);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: min(10px, 2vw);
+            width: 100%;
+            font-size: clamp(14px, 3.5vw, 16px);
+            font-weight: 500;
+        }
+
+        .toggle-history:hover {
+            background: var(--button-hover);
+        }
+
+        /* Landscape orientation adjustments */
+        @media (orientation: landscape) and (max-height: 600px) {
+            .calculator-container {
+                padding: min(15px, 3vw);
+            }
+            
+            .display {
+                min-height: clamp(60px, 15vh, 80px);
+                margin-bottom: min(10px, 2vw);
+            }
+            
+            .btn {
+                height: min(50px, 10vh);
+            }
+            
+            .current-input {
+                font-size: clamp(18px, 4vw, 24px);
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 320px) {
+            .btn {
+                font-size: 14px;
+            }
+            
+            .current-input {
+                font-size: 20px;
+            }
+        }
+
+        /* Large screens */
+        @media (min-width: 768px) {
+            .calculator-container {
+                max-width: 500px;
+            }
+        }
+
+        /* Scrollbar styling */
+        .history-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .history-panel::-webkit-scrollbar-track {
+            background: var(--button-bg);
+            border-radius: 10px;
+        }
+
+        .history-panel::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 10px;
+        }
+
+        .history-panel::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-hover);
+        }
+
+        /* Touch feedback animation */
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+            }
+        }
+
+        .btn.pulse {
+            animation: pulse 0.3s;
+        }
+
+        /* Prevent zoom on double tap */
+        * {
+            touch-action: manipulation;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="header">
+            <div class="mode-toggle">
+                <button class="mode-btn active" onclick="setMode('basic')">Basic</button>
+                <button class="mode-btn" onclick="setMode('scientific')">Scientific</button>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+        </div>
+
+        <div class="display">
+            <div class="history" id="history"></div>
+            <div class="current-input" id="display">0</div>
+        </div>
+
+        <div class="scientific-buttons" id="scientificButtons">
+            <button class="btn" onclick="appendFunction('sin(')">sin</button>
+            <button class="btn" onclick="appendFunction('cos(')">cos</button>
+            <button class="btn" onclick="appendFunction('tan(')">tan</button>
+            <button class="btn" onclick="appendFunction('log(')">log</button>
+            <button class="btn" onclick="appendFunction('ln(')">ln</button>
+            <button class="btn" onclick="appendFunction('sqrt(')">√</button>
+            <button class="btn" onclick="appendOperator('^')">x^y</button>
+            <button class="btn" onclick="appendConstant('π')">π</button>
+            <button class="btn" onclick="appendConstant('e')">e</button>
+            <button class="btn" onclick="factorial()">x!</button>
+            <button class="btn" onclick="appendOperator('(')">(</button>
+            <button class="btn" onclick="appendOperator(')')">)</button>
+        </div>
+
+        <div class="buttons">
+            <button class="btn clear" onclick="clearAll()">AC</button>
+            <button class="btn" onclick="clearEntry()">CE</button>
+            <button class="btn" onclick="percentage()">%</button>
+            <button class="btn operator" onclick="appendOperator('/')">÷</button>
+
+            <button class="btn" onclick="appendNumber('7')">7</button>
+            <button class="btn" onclick="appendNumber('8')">8</button>
+            <button class="btn" onclick="appendNumber('9')">9</button>
+            <button class="btn operator" onclick="appendOperator('*')">×</button>
+
+            <button class="btn" onclick="appendNumber('4')">4</button>
+            <button class="btn" onclick="appendNumber('5')">5</button>
+            <button class="btn" onclick="appendNumber('6')">6</button>
+            <button class="btn operator" onclick="appendOperator('-')">−</button>
+
+            <button class="btn" onclick="appendNumber('1')">1</button>
+            <button class="btn" onclick="appendNumber('2')">2</button>
+            <button class="btn" onclick="appendNumber('3')">3</button>
+            <button class="btn operator" onclick="appendOperator('+')">+</button>
+
+            <button class="btn zero" onclick="appendNumber('0')">0</button>
+            <button class="btn" onclick="appendDecimal()">.</button>
+            <button class="btn equals" onclick="calculate()">=</button>
+        </div>
+
+        <button class="toggle-history" onclick="toggleHistory()">📜 Show History</button>
+        <div class="history-panel" id="historyPanel"></div>
+    </div>
+
+    <script>
+        let currentInput = '0';
+        let fullExpression = '';
+        let shouldResetScreen = false;
+        let history = [];
+        let isDarkMode = true;
+
+        const display = document.getElementById('display');
+        const historyDisplay = document.getElementById('history');
+        const historyPanel = document.getElementById('historyPanel');
+
+        // Vibration feedback for mobile (if supported)
+        function vibrate(duration = 10) {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(duration);
+            }
+        }
+
+        function addPulseAnimation(element) {
+            element.classList.add('pulse');
+            setTimeout(() => {
+                element.classList.remove('pulse');
+            }, 300);
+        }
+
+        function updateDisplay() {
+            display.textContent = currentInput;
+            historyDisplay.textContent = fullExpression;
+            
+            // Adjust font size based on content length
+            if (currentInput.length > 10) {
+                display.style.fontSize = 'clamp(18px, 5vw, 28px)';
+            } else if (currentInput.length > 8) {
+                display.style.fontSize = 'clamp(20px, 5.5vw, 32px)';
+            } else {
+                display.style.fontSize = 'clamp(24px, 6vw, 36px)';
+            }
+        }
+
+        function appendNumber(num) {
+            vibrate();
+            if (shouldResetScreen || currentInput === '0') {
+                currentInput = num;
+                shouldResetScreen = false;
+            } else {
+                currentInput += num;
+            }
+            fullExpression += num;
+            updateDisplay();
+        }
+
+        function appendDecimal() {
+            vibrate();
+            if (shouldResetScreen) {
+                currentInput = '0.';
+                fullExpression = '0.';
+                shouldResetScreen = false;
+            } else if (!currentInput.includes('.')) {
+                currentInput += '.';
+                fullExpression += '.';
+            }
+            updateDisplay();
+        }
+
+        function appendOperator(op) {
+            vibrate();
+            if (shouldResetScreen && currentInput === '0' && op === '-') {
+                currentInput = '-';
+                fullExpression = '-';
+                shouldResetScreen = false;
+            } else {
+                fullExpression += ` ${op} `;
+                shouldResetScreen = true;
+            }
+            updateDisplay();
+        }
+
+        function appendFunction(func) {
+            vibrate();
+            if (shouldResetScreen || currentInput === '0') {
+                currentInput = func;
+                fullExpression = func;
+                shouldResetScreen = false;
+            } else {
+                currentInput += func;
+                fullExpression += func;
+            }
+            updateDisplay();
+        }
+
+        function appendConstant(constant) {
+            vibrate();
+            const value = constant === 'π' ? Math.PI.toString() : Math.E.toString();
+            if (shouldResetScreen || currentInput === '0') {
+                currentInput = value;
+                fullExpression = constant;
+                shouldResetScreen = false;
+            } else {
+                currentInput += value;
+                fullExpression += constant;
+            }
+            updateDisplay();
+        }
+
+        function clearAll() {
+            vibrate(20);
+            currentInput = '0';
+            fullExpression = '';
+            shouldResetScreen = false;
+            updateDisplay();
+        }
+
+        function clearEntry() {
+            vibrate(15);
+            const parts = fullExpression.split(/(\s[+\-*/^]\s|[+\-*/^])/);
+            if (parts.length > 1) {
+                parts.pop();
+                fullExpression = parts.join('');
+            } else {
+                fullExpression = '';
+            }
+            currentInput = '0';
+            updateDisplay();
+        }
+
+        function percentage() {
+            vibrate();
+            try {
+                const result = parseFloat(currentInput) / 100;
+                currentInput = result.toString();
+                fullExpression = fullExpression.replace(/[\d.]+$/, result.toString());
+                updateDisplay();
+            } catch (e) {
+                currentInput = 'Error';
+                updateDisplay();
+            }
+        }
+
+        function factorial() {
+            vibrate();
+            try {
+                const num = parseInt(currentInput);
+                if (num < 0 || num > 170) {
+                    currentInput = 'Error';
+                    updateDisplay();
+                    return;
+                }
+                let result = 1;
+                for (let i = 2; i <= num; i++) {
+                    result *= i;
+                }
+                currentInput = result.toString();
+                fullExpression = fullExpression.replace(/[\d.]+$/, result.toString());
+                shouldResetScreen = true;
+                updateDisplay();
+            } catch (e) {
+                currentInput = 'Error';
+                updateDisplay();
+            }
+        }
+  
+  function evaluateExpression(expr) {
+            // Replace mathematical functions and constants
+            expr = expr.replace(/sin\(/g, 'Math.sin(');
+            expr = expr.replace(/cos\(/g, 'Math.cos(');
+            expr = expr.replace(/tan\(/g, 'Math.tan(');
+            expr = expr.replace(/log\(/g, 'Math.log10(');
+            expr = expr.replace(/ln\(/g, 'Math.log(');
+            expr = expr.replace(/sqrt\(/g, 'Math.sqrt(');
+            expr = expr.replace(/π/g, Math.PI.toString());
+            expr = expr.replace(/e/g, Math.E.toString());
+            expr = expr.replace(/\^/g, '**');
+            expr = expr.replace(/×/g, '*');
+            expr = expr.replace(/÷/g, '/');
+            expr = expr.replace(/−/g, '-');
+            
+            // Handle implicit multiplication (e.g., 2sin(30) -> 2*sin(30))
+            expr = expr.replace(/(\d)(sin|cos|tan|log|ln|sqrt|π|e)/g, '$1*$2');
+            
+            return Function('"use strict"; return (' + expr + ')')();
+        }
+  
+  function calculate() {
+            vibrate(25);
+            if (fullExpression === '') return;
+
+            try {
+                const result = evaluateExpression(fullExpression);
+                
+                if (!isFinite(result)) {
+                    currentInput = 'Error';
+                } else {
+                    addToHistory(fullExpression, result);
+                    currentInput = result.toString();
+                    fullExpression = currentInput;
+                    shouldResetScreen = true;
+                }
+            } catch (e) {
+                currentInput = 'Error';
+                fullExpression = '';
+                shouldResetScreen = true;
+            }
+            updateDisplay();
+        }
+  
+  function addToHistory(expression, result) {
+            history.unshift({ expression, result: result.toString() });
+            if (history.length > 10) {
+                history.pop();
+            }
+            updateHistoryPanel();
+        }
+
+        function updateHistoryPanel() {
+            historyPanel.innerHTML = history.map((item, index) => 
+                `<div class="history-item" onclick="useHistoryItem(${index})">
+                    ${item.expression} = ${item.result}
+                </div>`
+            ).join('');
+        }
+
+        function useHistoryItem(index) {
+            vibrate();
+            currentInput = history[index].result;
+            fullExpression = history[index].result;
+            shouldResetScreen = true;
+            updateDisplay();
+        }
+
+        function toggleHistory() {
+            vibrate();
+            historyPanel.classList.toggle('show');
+            const btn = event.target;
+            btn.textContent = historyPanel.classList.contains('show') ? '📜 Hide History' : '📜 Show History';
+        }
+  
+  function setMode(mode) {
+            vibrate();
+            const container = document.querySelector('.calculator-container');
+            const buttons = document.querySelectorAll('.mode-btn');
+            
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (mode === 'scientific') {
+                container.classList.add('scientific-mode');
+            } else {
+                container.classList.remove('scientific-mode');
+            }
+        }
+
+        function toggleTheme() {
+            vibrate();
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('light-mode');
+            event.target.textContent = isDarkMode ? '🌙' : '☀️';
+        }
+  
+  
+  // Add touch feedback to all buttons
+        document.querySelectorAll('.btn, .mode-btn, .theme-toggle, .toggle-history').forEach(button => {
+            button.addEventListener('touchstart', function() {
+                addPulseAnimation(this);
+            });
+        });
+  
+  // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            e.preventDefault();
+            if (e.key >= '0' && e.key <= '9') {
+                appendNumber(e.key);
+            } else if (e.key === '.') {
+                appendDecimal();
+            } else if (e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/') {
+                appendOperator(e.key);
+            } else if (e.key === 'Enter' || e.key === '=') {
+                calculate();
+            } else if (e.key === 'Escape') {
+                clearAll();
+            } else if (e.key === 'Backspace') {
+                if (currentInput.length > 1) {
+                    currentInput = currentInput.slice(0, -1);
+                    fullExpression = fullExpression.slice(0, -1);
+                } else {
+                    currentInput = '0';
+                }
+                updateDisplay();
+            } else if (e.key === '%') {
+                percentage();
+            } else if (e.key === '(' || e.key === ')') {
+                appendOperator(e.key);
+            } else if (e.key === '^') {
+                appendOperator('^');
+            }
+        });
+  
+  // Handle orientation change
+        window.addEventListener('orientationchange', function() {
+            setTimeout(() => {
+                updateDisplay();
+            }, 100);
+        });
+
+        // Prevent zoom on input focus for mobile
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // Initialize
+        updateDisplay();
+    </script>
+</body>
+</html>
